@@ -5,8 +5,8 @@ import pandas as pd
 import time
 
 running = False
-ticker = "CS2"
-buffered_data = pd.DataFrame(columns=['best_bid', 'best_ask', 'bid_volume', 'ask_volume'])
+ticker = "AAPL"
+buffered_data = pd.DataFrame(columns=['datetime', 'best_bid', 'best_ask', 'bid_volume', 'ask_volume'])
 
 def collector_loop(trader):
     global running
@@ -19,7 +19,9 @@ def collector_loop(trader):
         bid_volume = best_price.get_bid_size()
         ask_volume = best_price.get_ask_size()
         
-        buffered_data.loc[len(buffered_data)] = [best_bid, best_ask, bid_volume, ask_volume]
+        now = datetime.datetime.now()
+        formatted_date = now.strftime("%Y-%m-%d %H:%M:%S")
+        buffered_data.loc[len(buffered_data)] = [formatted_date, best_bid, best_ask, bid_volume, ask_volume]
         print(f"best bid: {best_bid:.2f}, best ask: {best_ask:.2f}")
         print(f"bid volume: {bid_volume}, ask volume: {ask_volume}")
         print()
@@ -47,7 +49,7 @@ def save_data():
 
     try:
         updated_df.to_csv('data.csv', float_format='%.2f', index=False)
-        buffered_data = pd.DataFrame(columns=['best_bid', 'best_ask', 'bid_volume', 'ask_volume'])
+        buffered_data = pd.DataFrame(columns=['datetime', 'best_bid', 'best_ask', 'bid_volume', 'ask_volume'])
         return True
     except Exception as e:
         print(f"couldn't save csv. {e}")
