@@ -1,0 +1,29 @@
+import numpy as np
+import pandas as pd
+H = 5
+df = pd.read_csv("/mnt/user-data/uploads/57f2123d-data_AAPL.csv")
+df = df[(df.bid_volume + df.ask_volume > 0) & (df.best_bid <= df.best_ask)].reset_index(drop=True)
+df["obi"] = (df.bid_volume - df.ask_volume) / (df.bid_volume + df.ask_volume)
+mid = (df.best_bid + df.best_ask) / 2
+df["spread"] = df.best_ask - df.best_bid
+df["fwd"] = mid.shift(-H) - mid
+df = df.iloc[:-H].reset_index(drop=True)
+split = int(len(df) * 0.7)
+train, test = df.iloc[:split], df.iloc[split:]
+def trade_pnl(d, t):
+    side = np.where(d.obi > t, 1, np.where(d.obi < -t, -1, 0))
+    return side, side * d.fwd - np.abs(side) * d.spread
+thresholds = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
+scores = {}
+for t in thresholds:
+    side, pnl = trade_pnl(train, t)
+    if (side != 0).any():
+        scores[t] = pnl[side != 0].mean()
+best_t = max(scores, key=scores.get)
+side, pnl = trade_pnl(test, best_t)
+df["signal"] = np.where(df.obi > best_t, 1, np.where(df.obi < -best_t, -1, 0))
+print("The threshold is:", best_t)
+print("The train net avg per trade:", round(scores[best_t], 5))
+print("The test trades are:", int((side != 0).sum()))
+print("The test net avg per trade is :", round(pnl[side != 0].mean(), 5))
+print("Signal given by the algorithm", int(df.signal.iloc[-1]), "| OBI:", round(df.obi.iloc[-1], 4))
